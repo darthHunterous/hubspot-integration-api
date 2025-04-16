@@ -18,6 +18,6 @@ public class WebhookService {
             throw new UnauthorizedException("Invalid webhook signature");
         }
 
-        System.out.println("Webhook recebido e validado: " + payload);
+        System.out.println("Webhook signature validated, payload received: " + payload);
     }
 }
