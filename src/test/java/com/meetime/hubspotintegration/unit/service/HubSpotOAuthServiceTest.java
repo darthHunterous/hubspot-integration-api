@@ -31,17 +31,20 @@ class HubSpotOAuthServiceTest {
     TokenStore tokenStore;
 
     @Test
-    void buildAuthorizationUrl_encodesParamsCorrectly() {
+    void buildAuthorizationUrlWithState_encodesAllParamsAndState() {
         var service = new HubSpotOAuthService(
                 null, tokenStore,
                 CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
                 AUTH_URL, TOKEN_URL, SCOPES
         );
 
-        String url = service.buildAuthorizationUrl();
+        String state = "a b/c?d";
+        String url = service.buildAuthorizationUrlWithState(state);
+
         assertTrue(url.startsWith(AUTH_URL + "?client_id=" + CLIENT_ID));
-        assertTrue(url.contains("redirect_uri=" + REDIRECT_URI));
+        assertTrue(url.contains("redirect_uri=http%3A%2F%2Fcb"));
         assertTrue(url.contains("scope=s1%20s2"));
+        assertTrue(url.contains("state=a%20b%2Fc%3Fd"));
     }
 
     @Test

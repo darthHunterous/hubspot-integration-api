@@ -46,11 +46,12 @@ public class HubSpotOAuthService {
         this.scopes = scopes;
     }
 
-    public String buildAuthorizationUrl() {
+    public String buildAuthorizationUrlWithState(String state) {
         return authUrl +
-                "?client_id=" + clientId +
-                "&redirect_uri=" + redirectUri +
-                "&scope=" + scopes.replace(" ", "%20");
+                "?client_id="   + urlEncode(clientId) +
+                "&redirect_uri="+ urlEncode(redirectUri) +
+                "&scope="       + urlEncode(scopes) +
+                "&state="       + urlEncode(state);
     }
 
     public String exchangeCodeForToken(String code) {
@@ -96,6 +97,6 @@ public class HubSpotOAuthService {
     }
 
     private String urlEncode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 }
