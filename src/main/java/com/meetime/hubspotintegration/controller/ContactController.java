@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/contacts")
-class ContactController {
+public class ContactController {
 
     private final ContactService contactService;
 
@@ -17,8 +17,8 @@ class ContactController {
     }
 
     @SecurityRequirement(name = "BearerAuth")
-    @PostMapping
+    @PostMapping(consumes = "application/json", produces = "application/json")
     public String createContact(@Valid @RequestBody ContactDTO contactDTO) {
-        return contactService.createContact(contactDTO);
+        return contactService.syncContactToHubSpot(contactDTO);
     }
 }
