@@ -73,7 +73,7 @@ class HubSpotClientTest {
     void shouldThrowRuntimeExceptionIfSerializationFails() throws Exception {
         // Arrange
         ContactDTO dto = createMockContact();
-        WebClient webClient = mock(WebClient.class); // não será usado
+        WebClient webClient = mock(WebClient.class);
 
         when(objectMapper.writeValueAsString(dto)).thenThrow(new JsonProcessingException("fail") {});
         hubSpotClient = new HubSpotClient(webClient, objectMapper, oAuthService);

@@ -1,7 +1,12 @@
 package com.meetime.hubspotintegration.exception;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+
 import java.time.Instant;
 
+@Getter
 public class ApiError {
 
     private final int status;
@@ -18,9 +23,18 @@ public class ApiError {
         this.timestamp = Instant.now().toString();
     }
 
-    public int getStatus() { return status; }
-    public String getError() { return error; }
-    public String getMessage() { return message; }
-    public String getPath() { return path; }
-    public String getTimestamp() { return timestamp; }
+    @JsonCreator
+    public ApiError(
+            @JsonProperty("status") int status,
+            @JsonProperty("error") String error,
+            @JsonProperty("message") String message,
+            @JsonProperty("path") String path,
+            @JsonProperty("timestamp") String timestamp
+    ) {
+        this.status = status;
+        this.error = error;
+        this.message = message;
+        this.path = path;
+        this.timestamp = timestamp;
+    }
 }

@@ -12,7 +12,7 @@ public class MockWebClientHelper {
 
         WebClient.RequestBodyUriSpec requestBodyUriSpec = Mockito.mock(WebClient.RequestBodyUriSpec.class);
         WebClient.RequestBodySpec requestBodySpec = Mockito.mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec requestHeadersSpec = Mockito.mock(WebClient.RequestHeadersSpec.class); // tipo cru aqui
+        WebClient.RequestHeadersSpec requestHeadersSpec = Mockito.mock(WebClient.RequestHeadersSpec.class);
         WebClient.ResponseSpec responseSpec = Mockito.mock(WebClient.ResponseSpec.class);
 
         Mockito.when(webClient.post()).thenReturn(requestBodyUriSpec);
@@ -31,7 +31,7 @@ public class MockWebClientHelper {
 
         WebClient.RequestBodyUriSpec requestBodyUriSpec = Mockito.mock(WebClient.RequestBodyUriSpec.class);
         WebClient.RequestBodySpec requestBodySpec = Mockito.mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec requestHeadersSpec = Mockito.mock(WebClient.RequestHeadersSpec.class); // tipo cru aqui
+        WebClient.RequestHeadersSpec requestHeadersSpec = Mockito.mock(WebClient.RequestHeadersSpec.class);
         WebClient.ResponseSpec responseSpec = Mockito.mock(WebClient.ResponseSpec.class);
 
         Mockito.when(webClient.post()).thenReturn(requestBodyUriSpec);
