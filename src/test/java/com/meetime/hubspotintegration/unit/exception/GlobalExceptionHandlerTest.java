@@ -1,5 +1,8 @@
-package com.meetime.hubspotintegration.exception;
+package com.meetime.hubspotintegration.unit.exception;
 
+import com.meetime.hubspotintegration.exception.ApiError;
+import com.meetime.hubspotintegration.exception.GlobalExceptionHandler;
+import com.meetime.hubspotintegration.exception.HubSpotIntegrationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

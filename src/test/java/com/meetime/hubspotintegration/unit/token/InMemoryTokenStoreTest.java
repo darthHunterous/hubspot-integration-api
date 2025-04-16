@@ -1,5 +1,6 @@
-package com.meetime.hubspotintegration.token;
+package com.meetime.hubspotintegration.unit.token;
 
+import com.meetime.hubspotintegration.token.InMemoryTokenStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

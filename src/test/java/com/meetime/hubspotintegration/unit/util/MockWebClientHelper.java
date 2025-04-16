@@ -1,4 +1,4 @@
-package com.meetime.hubspotintegration.util;
+package com.meetime.hubspotintegration.unit.util;
 
 import org.mockito.Mockito;
 import org.springframework.http.MediaType;

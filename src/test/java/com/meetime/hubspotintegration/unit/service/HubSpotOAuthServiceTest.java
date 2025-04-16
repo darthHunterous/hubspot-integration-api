@@ -1,9 +1,10 @@
-package com.meetime.hubspotintegration.service;
+package com.meetime.hubspotintegration.unit.service;
 
 import com.meetime.hubspotintegration.dto.OAuthTokenResponse;
 import com.meetime.hubspotintegration.exception.HubSpotIntegrationException;
+import com.meetime.hubspotintegration.service.HubSpotOAuthService;
 import com.meetime.hubspotintegration.token.TokenStore;
-import com.meetime.hubspotintegration.util.MockWebClientHelper;
+import com.meetime.hubspotintegration.unit.util.MockWebClientHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

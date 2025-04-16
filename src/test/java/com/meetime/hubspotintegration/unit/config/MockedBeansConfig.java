@@ -1,4 +1,4 @@
-package com.meetime.hubspotintegration.config;
+package com.meetime.hubspotintegration.unit.config;
 
 import com.meetime.hubspotintegration.client.HubSpotClient;
 import org.mockito.Mockito;

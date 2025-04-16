@@ -1,6 +1,7 @@
-package com.meetime.hubspotintegration.config;
+package com.meetime.hubspotintegration.unit.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meetime.hubspotintegration.config.TokenAuthenticationFilter;
 import com.meetime.hubspotintegration.exception.ApiError;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

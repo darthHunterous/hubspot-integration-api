@@ -2,7 +2,7 @@ package com.meetime.hubspotintegration.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meetime.hubspotintegration.client.HubSpotClient;
-import com.meetime.hubspotintegration.config.MockedBeansConfig;
+import com.meetime.hubspotintegration.unit.config.MockedBeansConfig;
 import com.meetime.hubspotintegration.dto.ContactDTO;
 import com.meetime.hubspotintegration.dto.ContactPropertiesDTO;
 import org.junit.jupiter.api.Test;

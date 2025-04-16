@@ -1,7 +1,9 @@
-package com.meetime.hubspotintegration.service;
+package com.meetime.hubspotintegration.unit.service;
 
 import com.meetime.hubspotintegration.exception.UnauthorizedException;
+import com.meetime.hubspotintegration.service.WebhookService;
 import com.meetime.hubspotintegration.util.HubSpotSecurityUtils;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;

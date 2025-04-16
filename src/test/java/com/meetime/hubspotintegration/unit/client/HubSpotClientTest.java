@@ -1,11 +1,12 @@
-package com.meetime.hubspotintegration.client;
+package com.meetime.hubspotintegration.unit.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meetime.hubspotintegration.client.HubSpotClient;
 import com.meetime.hubspotintegration.dto.ContactDTO;
 import com.meetime.hubspotintegration.dto.ContactPropertiesDTO;
 import com.meetime.hubspotintegration.service.HubSpotOAuthService;
-import com.meetime.hubspotintegration.util.MockWebClientHelper;
+import com.meetime.hubspotintegration.unit.util.MockWebClientHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

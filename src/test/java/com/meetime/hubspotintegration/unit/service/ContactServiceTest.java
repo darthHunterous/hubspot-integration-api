@@ -1,8 +1,9 @@
-package com.meetime.hubspotintegration.service;
+package com.meetime.hubspotintegration.unit.service;
 
 import com.meetime.hubspotintegration.client.HubSpotClient;
 import com.meetime.hubspotintegration.dto.ContactDTO;
 import com.meetime.hubspotintegration.exception.HubSpotIntegrationException;
+import com.meetime.hubspotintegration.service.ContactService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
