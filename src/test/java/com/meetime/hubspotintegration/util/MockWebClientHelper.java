@@ -44,4 +44,26 @@ public class MockWebClientHelper {
 
         return webClient;
     }
+
+    public static <T> WebClient mockFormPostResponse(
+            String expectedUri,
+            Class<T> responseType,
+            T responseBody
+    ) {
+        WebClient webClient = Mockito.mock(WebClient.class);
+
+        WebClient.RequestBodyUriSpec uriSpec       = Mockito.mock(WebClient.RequestBodyUriSpec.class);
+        WebClient.RequestBodySpec    bodySpec      = Mockito.mock(WebClient.RequestBodySpec.class);
+        WebClient.RequestHeadersSpec headersSpec   = Mockito.mock(WebClient.RequestHeadersSpec.class);
+        WebClient.ResponseSpec       responseSpec  = Mockito.mock(WebClient.ResponseSpec.class);
+
+        Mockito.when(webClient.post()).thenReturn(uriSpec);
+        Mockito.when(uriSpec.uri(expectedUri)).thenReturn(bodySpec);
+        Mockito.when(bodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED)).thenReturn(bodySpec);
+        Mockito.when(bodySpec.bodyValue(Mockito.anyString())).thenReturn(headersSpec);
+        Mockito.when(headersSpec.retrieve()).thenReturn(responseSpec);
+        Mockito.when(responseSpec.bodyToMono(responseType)).thenReturn(Mono.just(responseBody));
+
+        return webClient;
+    }
 }
