@@ -3,7 +3,6 @@ package com.meetime.hubspotintegration.integration;
 import com.meetime.hubspotintegration.config.MockedBeansConfig;
 import com.meetime.hubspotintegration.service.WebhookService;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;

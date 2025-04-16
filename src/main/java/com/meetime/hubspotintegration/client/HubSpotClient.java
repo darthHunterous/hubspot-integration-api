@@ -1,20 +1,13 @@
 package com.meetime.hubspotintegration.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meetime.hubspotintegration.dto.ContactDTO;
-import com.meetime.hubspotintegration.exception.HubSpotIntegrationException;
 import com.meetime.hubspotintegration.service.HubSpotOAuthService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-
-import java.util.Map;
 
 @Component
 public class HubSpotClient {
