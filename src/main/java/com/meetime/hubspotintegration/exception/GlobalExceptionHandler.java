@@ -30,6 +30,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException ex, HttpServletRequest request) {
+        log.error("Unauthorized error", ex);
         return buildError(HttpStatus.UNAUTHORIZED, "Unauthorized", request.getRequestURI());
     }
 
