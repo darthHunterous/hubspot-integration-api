@@ -2,6 +2,7 @@ package com.meetime.hubspotintegration.controller;
 
 import com.meetime.hubspotintegration.dto.ContactDTO;
 import com.meetime.hubspotintegration.service.ContactService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,7 @@ class ContactController {
         this.contactService = contactService;
     }
 
+    @SecurityRequirement(name = "BearerAuth")
     @PostMapping
     public String createContact(@Valid @RequestBody ContactDTO contactDTO) {
         return contactService.createContact(contactDTO);
