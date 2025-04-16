@@ -1,5 +1,6 @@
 package com.meetime.hubspotintegration.service;
 
+import com.meetime.hubspotintegration.exception.UnauthorizedException;
 import com.meetime.hubspotintegration.util.HubSpotSecurityUtils;
 import org.springframework.stereotype.Service;
 
@@ -12,14 +13,11 @@ public class WebhookService {
         this.hubSpotSecurityUtils = hubSpotSecurityUtils;
     }
 
-    public void processWebhook(String payload, String signature, String timestamp,
-                               String method, String uri) {
-        String baseString = method + uri + payload + timestamp;
-
+    public void processWebhook(String payload, String signature) {
         if (!hubSpotSecurityUtils.isValidSignature(payload, signature)) {
-            throw new RuntimeException("Invalid webhook signature");
+            throw new UnauthorizedException("Invalid webhook signature");
         }
-        // Processar payload conforme necessário
+
         System.out.println("Webhook recebido e validado: " + payload);
     }
 }

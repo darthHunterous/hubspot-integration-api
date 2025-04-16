@@ -28,6 +28,11 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.BAD_REQUEST, msg, request.getRequestURI());
     }
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException ex, HttpServletRequest request) {
+        return buildError(HttpStatus.UNAUTHORIZED, "Unauthorized", request.getRequestURI());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
         log.error("Unexpected error", ex);
