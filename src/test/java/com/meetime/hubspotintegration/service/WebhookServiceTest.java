@@ -27,8 +27,6 @@ class WebhookServiceTest {
 
         // Act & Assert
         assertDoesNotThrow(() -> webhookService.processWebhook(payload, signature));
-
-        // Verify that the utility was called
         verify(securityUtils).isValidSignature(payload, signature);
     }
 
@@ -45,8 +43,6 @@ class WebhookServiceTest {
                 () -> webhookService.processWebhook(payload, signature)
         );
         assertEquals("Invalid webhook signature", ex.getMessage());
-
-        // Verify that the utility was called
         verify(securityUtils).isValidSignature(payload, signature);
     }
 }
