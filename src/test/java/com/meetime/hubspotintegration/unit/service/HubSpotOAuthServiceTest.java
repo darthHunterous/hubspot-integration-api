@@ -12,6 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,65 +30,55 @@ class HubSpotOAuthServiceTest {
     private static final String SCOPES        = "s1 s2";
 
     @Mock
-    TokenStore tokenStore;
+    private TokenStore tokenStore;
 
     @Test
     void buildAuthorizationUrlWithState_encodesAllParamsAndState() {
-        var service = new HubSpotOAuthService(
+        HubSpotOAuthService service = new HubSpotOAuthService(
                 null, tokenStore,
                 CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
                 AUTH_URL, TOKEN_URL, SCOPES
         );
 
-        String state = "a b/c?d";
-        String url = service.buildAuthorizationUrlWithState(state);
+        String rawState = "a b/c?d";
+        String url = service.buildAuthorizationUrlWithState(rawState);
 
+        // Prefixo e parâmetros fixos
         assertTrue(url.startsWith(AUTH_URL + "?client_id=" + CLIENT_ID));
-        assertTrue(url.contains("redirect_uri=http%3A%2F%2Fcb"));
-        assertTrue(url.contains("scope=s1%20s2"));
-        assertTrue(url.contains("state=a%20b%2Fc%3Fd"));
+        assertTrue(url.contains("redirect_uri=" + URLEncoder.encode(REDIRECT_URI, StandardCharsets.UTF_8).replace("+", "%20")));
+        assertTrue(url.contains("scope=" + "s1%20s2"));
+
+        // Verifica state percent‑encoded
+        String expectedState = URLEncoder.encode(rawState, StandardCharsets.UTF_8).replace("+", "%20");
+        assertTrue(url.contains("state=" + expectedState));
     }
 
     @Test
-    void exchangeCodeForToken_successStoresTokenAndReturnsIt() {
-        var mockResp = new OAuthTokenResponse();
-        mockResp.setAccessToken("the-token");
+    void exchangeCodeForToken_successStoresBothTokensAndReturnsAccess() {
+        // prepare response com access + refresh
+        OAuthTokenResponse resp = new OAuthTokenResponse("at123", "rt456", 999);
 
         WebClient mockClient = MockWebClientHelper.mockFormPostResponse(
-                TOKEN_URL, OAuthTokenResponse.class, mockResp
+                TOKEN_URL, OAuthTokenResponse.class, resp
         );
 
-        var service = new HubSpotOAuthService(
+        HubSpotOAuthService service = new HubSpotOAuthService(
                 mockClient, tokenStore,
                 CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
                 AUTH_URL, TOKEN_URL, SCOPES
         );
 
         String token = service.exchangeCodeForToken("auth-code");
-        assertEquals("the-token", token);
-        verify(tokenStore).storeAccessToken("the-token");
-    }
+        assertEquals("at123", token);
 
-    @Test
-    void exchangeCodeForToken_whenWebClientThrows_wrapsException() {
-        WebClient badClient = mock(WebClient.class);
-        when(badClient.post()).thenThrow(new RuntimeException("network failure"));
-
-        var service = new HubSpotOAuthService(
-                badClient, tokenStore,
-                CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
-                AUTH_URL, TOKEN_URL, SCOPES
-        );
-
-        var ex = assertThrows(HubSpotIntegrationException.class,
-                () -> service.exchangeCodeForToken("code"));
-
-        assertTrue(ex.getMessage().contains("Error trying to obtain access token"));
-        assertEquals("network failure", ex.getCause().getMessage());
+        // verifica armazenamento de ambos
+        verify(tokenStore).storeAccessToken("at123");
+        verify(tokenStore).storeRefreshToken("rt456");
     }
 
     @Test
     void exchangeCodeForToken_nullResponse_throws() {
+        // simula Mono.empty() => resp == null
         WebClient mockClient = mock(WebClient.class);
         var uriSpec    = mock(WebClient.RequestBodyUriSpec.class);
         var bodySpec   = mock(WebClient.RequestBodySpec.class);
@@ -100,39 +92,111 @@ class HubSpotOAuthServiceTest {
         when(headersSpec.retrieve()).thenReturn(respSpec);
         when(respSpec.bodyToMono(OAuthTokenResponse.class)).thenReturn(Mono.empty());
 
-        var service = new HubSpotOAuthService(
+        HubSpotOAuthService service = new HubSpotOAuthService(
                 mockClient, tokenStore,
                 CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
                 AUTH_URL, TOKEN_URL, SCOPES
         );
 
-        var ex = assertThrows(HubSpotIntegrationException.class,
-                () -> service.exchangeCodeForToken("code"));
+        HubSpotIntegrationException ex = assertThrows(
+                HubSpotIntegrationException.class,
+                () -> service.exchangeCodeForToken("code")
+        );
         assertTrue(ex.getMessage().contains("No access token received"));
     }
 
     @Test
-    void getAccessToken_whenPresent_returnsValue() {
-        when(tokenStore.getAccessToken()).thenReturn(Optional.of("xyz"));
-        var service = new HubSpotOAuthService(
-                null, tokenStore,
+    void exchangeCodeForToken_webClientError_wrapsException() {
+        WebClient badClient = mock(WebClient.class);
+        when(badClient.post()).thenThrow(new RuntimeException("network down"));
+
+        HubSpotOAuthService service = new HubSpotOAuthService(
+                badClient, tokenStore,
                 CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
                 AUTH_URL, TOKEN_URL, SCOPES
         );
 
-        assertEquals("xyz", service.getAccessToken());
+        HubSpotIntegrationException ex = assertThrows(
+                HubSpotIntegrationException.class,
+                () -> service.exchangeCodeForToken("x")
+        );
+        assertTrue(ex.getMessage().contains("Error trying to obtain access token"));
+        assertEquals("network down", ex.getCause().getMessage());
     }
 
     @Test
-    void getAccessToken_whenAbsent_throwsIllegalState() {
-        when(tokenStore.getAccessToken()).thenReturn(Optional.empty());
-        var service = new HubSpotOAuthService(
-                null, tokenStore,
+    void refreshAccessToken_successStoresBothTokensAndReturnsAccess() {
+        OAuthTokenResponse resp = new OAuthTokenResponse("newAt", "newRt", 123);
+
+        WebClient mockClient = MockWebClientHelper.mockFormPostResponse(
+                TOKEN_URL, OAuthTokenResponse.class, resp
+        );
+
+        HubSpotOAuthService service = new HubSpotOAuthService(
+                mockClient, tokenStore,
                 CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
                 AUTH_URL, TOKEN_URL, SCOPES
         );
 
-        var ex = assertThrows(IllegalStateException.class, service::getAccessToken);
+        String at = service.refreshAccessToken("oldRt");
+        assertEquals("newAt", at);
+        verify(tokenStore).storeAccessToken("newAt");
+        verify(tokenStore).storeRefreshToken("newRt");
+    }
+
+    @Test
+    void refreshAccessToken_nullOrInvalid_throws() {
+        WebClient mockClient = mock(WebClient.class);
+        var uriSpec    = mock(WebClient.RequestBodyUriSpec.class);
+        var bodySpec   = mock(WebClient.RequestBodySpec.class);
+        var headersSpec= mock(WebClient.RequestHeadersSpec.class);
+        var respSpec   = mock(WebClient.ResponseSpec.class);
+
+        when(mockClient.post()).thenReturn(uriSpec);
+        when(uriSpec.uri(TOKEN_URL)).thenReturn(bodySpec);
+        when(bodySpec.contentType(any())).thenReturn(bodySpec);
+        when(bodySpec.bodyValue(anyString())).thenReturn(headersSpec);
+        when(headersSpec.retrieve()).thenReturn(respSpec);
+        // simula sem accessToken
+        OAuthTokenResponse bad = new OAuthTokenResponse(null, "rt", 0);
+        when(respSpec.bodyToMono(OAuthTokenResponse.class)).thenReturn(Mono.just(bad));
+
+        HubSpotOAuthService service = new HubSpotOAuthService(
+                mockClient, tokenStore,
+                CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
+                AUTH_URL, TOKEN_URL, SCOPES
+        );
+
+        HubSpotIntegrationException ex = assertThrows(
+                HubSpotIntegrationException.class,
+                () -> service.refreshAccessToken("rt")
+        );
+        assertTrue(ex.getMessage().contains("Failed to refresh access token"));
+    }
+
+    @Test
+    void getAccessToken_whenPresent_returnsIt() {
+        when(tokenStore.getAccessToken()).thenReturn(Optional.of("z"));
+        HubSpotOAuthService service = new HubSpotOAuthService(
+                null, tokenStore,
+                CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
+                AUTH_URL, TOKEN_URL, SCOPES
+        );
+        assertEquals("z", service.getAccessToken());
+    }
+
+    @Test
+    void getAccessToken_whenAbsent_throws() {
+        when(tokenStore.getAccessToken()).thenReturn(Optional.empty());
+        HubSpotOAuthService service = new HubSpotOAuthService(
+                null, tokenStore,
+                CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
+                AUTH_URL, TOKEN_URL, SCOPES
+        );
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                service::getAccessToken
+        );
         assertEquals("No access token available", ex.getMessage());
     }
 }

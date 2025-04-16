@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -56,33 +57,35 @@ public class HubSpotOAuthService {
 
     public String exchangeCodeForToken(String code) {
         Map<String, String> form = Map.of(
-                "grant_type", "authorization_code",
-                "client_id", clientId,
+                "grant_type",    "authorization_code",
+                "client_id",     clientId,
                 "client_secret", clientSecret,
-                "redirect_uri", redirectUri,
-                "code", code
+                "redirect_uri",  redirectUri,
+                "code",          code
         );
-
-        OAuthTokenResponse response;
-        try {
-            response = webClient.post()
-                    .uri(tokenUrl)
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .bodyValue(toUrlEncodedForm(form))
-                    .retrieve()
-                    .bodyToMono(OAuthTokenResponse.class)
-                    .block();
-        } catch (Exception e) {
-            throw new HubSpotIntegrationException("Error trying to obtain access token from HubSpot", e);
-        }
-
-        if (response == null || response.getAccessToken() == null) {
+        OAuthTokenResponse resp = postForm(form, OAuthTokenResponse.class);
+        if (resp == null || resp.getAccessToken() == null) {
             throw new HubSpotIntegrationException("No access token received from HubSpot", null);
         }
+        tokenStore.storeAccessToken(resp.getAccessToken());
+        tokenStore.storeRefreshToken(resp.getRefreshToken());
+        return resp.getAccessToken();
+    }
 
-        String accessToken = response.getAccessToken();
-        tokenStore.storeAccessToken(accessToken);
-        return accessToken;
+    public String refreshAccessToken(String refreshToken) {
+        Map<String, String> form = Map.of(
+                "grant_type",    "refresh_token",
+                "client_id",     clientId,
+                "client_secret", clientSecret,
+                "refresh_token", refreshToken
+        );
+        OAuthTokenResponse resp = postForm(form, OAuthTokenResponse.class);
+        if (resp == null || resp.getAccessToken() == null) {
+            throw new HubSpotIntegrationException("Failed to refresh access token", null);
+        }
+        tokenStore.storeAccessToken(resp.getAccessToken());
+        tokenStore.storeRefreshToken(resp.getRefreshToken());
+        return resp.getAccessToken();
     }
 
     public String getAccessToken() {
@@ -90,10 +93,24 @@ public class HubSpotOAuthService {
                 .orElseThrow(() -> new IllegalStateException("No access token available"));
     }
 
-    private String toUrlEncodedForm(Map<String, String> data) {
-        return data.entrySet().stream()
-                .map(e -> urlEncode(e.getKey()) + "=" + urlEncode(e.getValue()))
-                .collect(Collectors.joining("&"));
+    private <T> T postForm(Map<String, String> form, Class<T> type) {
+        try {
+            String body = form.entrySet().stream()
+                    .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "="
+                            + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                    .collect(Collectors.joining("&"));
+
+            Mono<T> mono = webClient.post()
+                    .uri(tokenUrl)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .bodyValue(body)
+                    .retrieve()
+                    .bodyToMono(type);
+
+            return mono.block();
+        } catch (Exception e) {
+            throw new HubSpotIntegrationException("Error trying to obtain access token from HubSpot", e);
+        }
     }
 
     private String urlEncode(String value) {
