@@ -4,83 +4,107 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meetime.hubspotintegration.client.HubSpotClient;
 import com.meetime.hubspotintegration.dto.ContactDTO;
-import com.meetime.hubspotintegration.dto.ContactPropertiesDTO;
+import com.meetime.hubspotintegration.exception.HubSpotIntegrationException;
 import com.meetime.hubspotintegration.service.HubSpotOAuthService;
 import com.meetime.hubspotintegration.unit.util.MockWebClientHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import org.junit.jupiter.api.extension.ExtendWith;
+import reactor.util.retry.Retry;
+
+@ExtendWith(MockitoExtension.class)
 class HubSpotClientTest {
 
-    private HubSpotClient hubSpotClient;
-    private HubSpotOAuthService oAuthService;
+    private static final String TOKEN = "access-token";
+    private static final String CONTACTS_URL = "https://api.hubapi.com/crm/v3/objects/contacts";
+
+    @Mock
+    private WebClient webClient;
+
+    @Mock
     private ObjectMapper objectMapper;
 
-    private static final String TOKEN = "dummy-token";
-    private static final String URI = "https://api.hubapi.com/crm/v3/objects/contacts";
-    private static final String JSON_BODY = "{\"properties\":{\"email\":\"test@example.com\",\"firstname\":\"John\",\"lastname\":\"Doe\"}}";
-    private static final String RESPONSE = "{\"result\":\"ok\"}";
+    @Mock
+    private HubSpotOAuthService oAuthService;
 
-    private ContactDTO createMockContact() {
-        ContactDTO dto = new ContactDTO();
-        ContactPropertiesDTO properties = new ContactPropertiesDTO();
+    private HubSpotClient hubSpotClient;
 
-        properties.setEmail("test@example.com");
-        properties.setFirstname("John");
-        properties.setLastname("Doe");
-        dto.setProperties(properties);
-
-        return dto;
-    }
+    private final Retry noRetry = Retry.max(0);
 
     @BeforeEach
-    void setup() {
-        objectMapper = Mockito.mock(ObjectMapper.class);
-        oAuthService = Mockito.mock(HubSpotOAuthService.class);
+    void setUp() {
+        hubSpotClient = new HubSpotClient(webClient, objectMapper, oAuthService, noRetry);
     }
 
     @Test
-    void shouldCreateContactSuccessfully() throws Exception {
+    void createContact_successfulRequest_shouldReturnResponseBody() throws JsonProcessingException {
         // Arrange
-        ContactDTO dto = createMockContact();
-
-        WebClient webClient = MockWebClientHelper.mockPostJsonResponse(
-                URI,
-                JSON_BODY,
-                TOKEN,
-                RESPONSE
-        );
+        ContactDTO dto = new ContactDTO();
+        String jsonBody = "{\"properties\":{\"email\":\"a@b.com\"}}";
+        String expectedResponse = "{\"id\":\"123\"}";
 
         when(oAuthService.getAccessToken()).thenReturn(TOKEN);
-        when(objectMapper.writeValueAsString(dto)).thenReturn(JSON_BODY);
+        when(objectMapper.writeValueAsString(dto)).thenReturn(jsonBody);
 
-        hubSpotClient = new HubSpotClient(webClient, objectMapper, oAuthService);
+        WebClient mock = MockWebClientHelper.mockJsonPostResponse(expectedResponse);
+        hubSpotClient = new HubSpotClient(mock, objectMapper, oAuthService, noRetry);
 
         // Act
         String result = hubSpotClient.createContact(dto);
 
         // Assert
-        assertEquals(RESPONSE, result);
-        verify(oAuthService).getAccessToken();
-        verify(objectMapper).writeValueAsString(dto);
+        assertEquals(expectedResponse, result);
     }
 
     @Test
-    void shouldThrowRuntimeExceptionIfSerializationFails() throws Exception {
+    void createContact_whenJsonProcessingFails_shouldThrowRuntimeException() throws JsonProcessingException {
         // Arrange
-        ContactDTO dto = createMockContact();
-        WebClient webClient = mock(WebClient.class);
-
+        ContactDTO dto = new ContactDTO();
         when(objectMapper.writeValueAsString(dto)).thenThrow(new JsonProcessingException("fail") {});
-        hubSpotClient = new HubSpotClient(webClient, objectMapper, oAuthService);
+        when(oAuthService.getAccessToken()).thenReturn(TOKEN);
 
         // Act & Assert
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> hubSpotClient.createContact(dto));
-        assertTrue(ex.getMessage().contains("Error serializing ContactDTO"));
+        assertThrows(RuntimeException.class, () -> hubSpotClient.createContact(dto));
+    }
+
+    @Test
+    void createContact_whenHubSpotReturns429_shouldRetryAndThrowAfterMaxRetries() throws JsonProcessingException {
+        // Arrange
+        ContactDTO dto = new ContactDTO();
+        String jsonBody = "{\"properties\":{\"email\":\"a@b.com\"}}";
+        when(oAuthService.getAccessToken()).thenReturn(TOKEN);
+        when(objectMapper.writeValueAsString(dto)).thenReturn(jsonBody);
+
+        WebClient mock = MockWebClientHelper.mock429RateLimitResponse();
+        hubSpotClient = new HubSpotClient(mock, objectMapper, oAuthService, noRetry);
+
+        // Act & Assert
+        Exception ex = assertThrows(RuntimeException.class, () -> hubSpotClient.createContact(dto));
+        assertInstanceOf(HubSpotIntegrationException.class, ex.getCause());
+        assertTrue(ex.getCause().getMessage().contains("Rate limit exceeded"));
+    }
+
+    @Test
+    void createContact_whenHubSpotReturns400_shouldThrowIntegrationException() throws JsonProcessingException {
+        // Arrange
+        ContactDTO dto = new ContactDTO();
+        String jsonBody = "{\"properties\":{\"email\":\"a@b.com\"}}";
+        when(oAuthService.getAccessToken()).thenReturn(TOKEN);
+        when(objectMapper.writeValueAsString(dto)).thenReturn(jsonBody);
+
+        WebClient mock = MockWebClientHelper.mockErrorJsonPostResponse(400, "Bad Request");
+        hubSpotClient = new HubSpotClient(mock, objectMapper, oAuthService, noRetry);
+
+        // Act & Assert
+        Exception ex = assertThrows(RuntimeException.class, () -> hubSpotClient.createContact(dto));
+        assertInstanceOf(HubSpotIntegrationException.class, ex.getCause());
+        assertTrue(ex.getCause().getMessage().contains("HubSpot error:"));
     }
 }

@@ -43,23 +43,20 @@ class HubSpotOAuthServiceTest {
         String rawState = "a b/c?d";
         String url = service.buildAuthorizationUrlWithState(rawState);
 
-        // Prefixo e parâmetros fixos
         assertTrue(url.startsWith(AUTH_URL + "?client_id=" + CLIENT_ID));
         assertTrue(url.contains("redirect_uri=" + URLEncoder.encode(REDIRECT_URI, StandardCharsets.UTF_8).replace("+", "%20")));
         assertTrue(url.contains("scope=" + "s1%20s2"));
 
-        // Verifica state percent‑encoded
         String expectedState = URLEncoder.encode(rawState, StandardCharsets.UTF_8).replace("+", "%20");
         assertTrue(url.contains("state=" + expectedState));
     }
 
     @Test
     void exchangeCodeForToken_successStoresBothTokensAndReturnsAccess() {
-        // prepare response com access + refresh
         OAuthTokenResponse resp = new OAuthTokenResponse("at123", "rt456", 999);
 
-        WebClient mockClient = MockWebClientHelper.mockFormPostResponse(
-                TOKEN_URL, OAuthTokenResponse.class, resp
+        WebClient mockClient = MockWebClientHelper.mockFormPostWithObjectResponse(
+                TOKEN_URL, resp
         );
 
         HubSpotOAuthService service = new HubSpotOAuthService(
@@ -71,14 +68,12 @@ class HubSpotOAuthServiceTest {
         String token = service.exchangeCodeForToken("auth-code");
         assertEquals("at123", token);
 
-        // verifica armazenamento de ambos
         verify(tokenStore).storeAccessToken("at123");
         verify(tokenStore).storeRefreshToken("rt456");
     }
 
     @Test
     void exchangeCodeForToken_nullResponse_throws() {
-        // simula Mono.empty() => resp == null
         WebClient mockClient = mock(WebClient.class);
         var uriSpec    = mock(WebClient.RequestBodyUriSpec.class);
         var bodySpec   = mock(WebClient.RequestBodySpec.class);
@@ -128,8 +123,8 @@ class HubSpotOAuthServiceTest {
     void refreshAccessToken_successStoresBothTokensAndReturnsAccess() {
         OAuthTokenResponse resp = new OAuthTokenResponse("newAt", "newRt", 123);
 
-        WebClient mockClient = MockWebClientHelper.mockFormPostResponse(
-                TOKEN_URL, OAuthTokenResponse.class, resp
+        WebClient mockClient = MockWebClientHelper.mockFormPostWithObjectResponse(
+                TOKEN_URL, resp
         );
 
         HubSpotOAuthService service = new HubSpotOAuthService(
@@ -157,7 +152,7 @@ class HubSpotOAuthServiceTest {
         when(bodySpec.contentType(any())).thenReturn(bodySpec);
         when(bodySpec.bodyValue(anyString())).thenReturn(headersSpec);
         when(headersSpec.retrieve()).thenReturn(respSpec);
-        // simula sem accessToken
+
         OAuthTokenResponse bad = new OAuthTokenResponse(null, "rt", 0);
         when(respSpec.bodyToMono(OAuthTokenResponse.class)).thenReturn(Mono.just(bad));
 
