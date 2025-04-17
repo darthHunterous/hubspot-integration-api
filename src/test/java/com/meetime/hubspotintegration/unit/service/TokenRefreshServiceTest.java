@@ -3,53 +3,50 @@ package com.meetime.hubspotintegration.unit.service;
 import com.meetime.hubspotintegration.service.HubSpotOAuthService;
 import com.meetime.hubspotintegration.service.TokenRefreshService;
 import com.meetime.hubspotintegration.token.TokenStore;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(org.mockito.junit.jupiter.MockitoExtension.class)
 class TokenRefreshServiceTest {
 
-    @Mock
-    private HubSpotOAuthService oauthService;
-
-    @Mock
     private TokenStore tokenStore;
+    private HubSpotOAuthService oauth;
+    private TokenRefreshService service;
 
-    @InjectMocks
-    private TokenRefreshService refreshService;
-
-    @Test
-    void refreshToken_withExistingRefreshToken_callsOauthRefresh() {
-        // Arrange
-        when(tokenStore.getRefreshToken()).thenReturn(Optional.of("existing-refresh"));
-
-        // Act
-        refreshService.refreshToken();
-
-        // Assert
-        verify(tokenStore).getRefreshToken();
-        verify(oauthService).refreshAccessToken("existing-refresh");
+    @BeforeEach
+    void setup() {
+        tokenStore = mock(TokenStore.class);
+        oauth = mock(HubSpotOAuthService.class);
+        service = new TokenRefreshService(oauth, tokenStore);
     }
 
     @Test
-    void refreshToken_withoutRefreshToken_throwsIllegalStateException() {
+    void shouldRefreshTokenWhenRefreshTokenIsPresent() {
+        // Arrange
+        when(tokenStore.getRefreshToken()).thenReturn(Optional.of("refresh123"));
+        when(oauth.refreshAccessToken("refresh123")).thenReturn("newAccess");
+
+        // Act
+        service.refreshToken();
+
+        // Assert
+        verify(oauth).refreshAccessToken("refresh123");
+        verify(tokenStore).storeAccessToken("newAccess");
+    }
+
+    @Test
+    void shouldSkipWhenRefreshTokenIsMissing() {
         // Arrange
         when(tokenStore.getRefreshToken()).thenReturn(Optional.empty());
 
-        // Act & Assert
-        IllegalStateException ex = assertThrows(
-                IllegalStateException.class,
-                () -> refreshService.refreshToken()
-        );
-        assertEquals("No refresh token", ex.getMessage());
+        // Act
+        service.refreshToken();
 
-        verify(tokenStore).getRefreshToken();
-        verifyNoInteractions(oauthService);
+        // Assert
+        verify(oauth, never()).refreshAccessToken(any());
+        verify(tokenStore, never()).storeAccessToken(any());
     }
 }
