@@ -63,13 +63,13 @@ public class HubSpotOAuthService {
                 "redirect_uri",  redirectUri,
                 "code",          code
         );
-        OAuthTokenResponse resp = postForm(form, OAuthTokenResponse.class);
-        if (resp == null || resp.getAccessToken() == null) {
+        OAuthTokenResponse resp = postForm(form);
+        if (resp == null || resp.accessToken() == null) {
             throw new HubSpotIntegrationException("No access token received from HubSpot", null);
         }
-        tokenStore.storeAccessToken(resp.getAccessToken());
-        tokenStore.storeRefreshToken(resp.getRefreshToken());
-        return resp.getAccessToken();
+        tokenStore.storeAccessToken(resp.accessToken());
+        tokenStore.storeRefreshToken(resp.refreshToken());
+        return resp.accessToken();
     }
 
     public String refreshAccessToken(String refreshToken) {
@@ -79,13 +79,13 @@ public class HubSpotOAuthService {
                 "client_secret", clientSecret,
                 "refresh_token", refreshToken
         );
-        OAuthTokenResponse resp = postForm(form, OAuthTokenResponse.class);
-        if (resp == null || resp.getAccessToken() == null) {
+        OAuthTokenResponse resp = postForm(form);
+        if (resp == null || resp.accessToken() == null) {
             throw new HubSpotIntegrationException("Failed to refresh access token", null);
         }
-        tokenStore.storeAccessToken(resp.getAccessToken());
-        tokenStore.storeRefreshToken(resp.getRefreshToken());
-        return resp.getAccessToken();
+        tokenStore.storeAccessToken(resp.accessToken());
+        tokenStore.storeRefreshToken(resp.refreshToken());
+        return resp.accessToken();
     }
 
     public String getAccessToken() {
@@ -93,19 +93,19 @@ public class HubSpotOAuthService {
                 .orElseThrow(() -> new IllegalStateException("No access token available"));
     }
 
-    private <T> T postForm(Map<String, String> form, Class<T> type) {
+    private OAuthTokenResponse postForm(Map<String, String> form) {
         try {
             String body = form.entrySet().stream()
                     .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "="
                             + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
                     .collect(Collectors.joining("&"));
 
-            Mono<T> mono = webClient.post()
+            Mono<OAuthTokenResponse> mono = webClient.post()
                     .uri(tokenUrl)
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .bodyValue(body)
                     .retrieve()
-                    .bodyToMono(type);
+                    .bodyToMono(OAuthTokenResponse.class);
 
             return mono.block();
         } catch (Exception e) {

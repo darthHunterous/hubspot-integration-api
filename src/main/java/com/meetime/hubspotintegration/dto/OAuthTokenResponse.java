@@ -2,14 +2,8 @@ package com.meetime.hubspotintegration.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
 
-@Data
-public class OAuthTokenResponse {
-
-    private final String accessToken;
-    private final String refreshToken;
-    private final Integer expiresIn;
+public record OAuthTokenResponse(String accessToken, String refreshToken, Integer expiresIn) {
 
     @JsonCreator
     public OAuthTokenResponse(
@@ -17,8 +11,8 @@ public class OAuthTokenResponse {
             @JsonProperty("refresh_token") String refreshToken,
             @JsonProperty("expires_in") Integer expiresIn
     ) {
-        this.accessToken  = accessToken;
+        this.accessToken = accessToken;
         this.refreshToken = refreshToken;
-        this.expiresIn    = expiresIn;
+        this.expiresIn = expiresIn;
     }
 }
