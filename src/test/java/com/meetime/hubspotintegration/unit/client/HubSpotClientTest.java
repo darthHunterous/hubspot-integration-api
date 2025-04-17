@@ -40,7 +40,7 @@ class HubSpotClientTest {
 
     @BeforeEach
     void setUp() {
-        hubSpotClient = new HubSpotClient(webClient, objectMapper, oAuthService, noRetry);
+        hubSpotClient = new HubSpotClient(webClient, objectMapper, oAuthService, noRetry, CONTACTS_URL);
     }
 
     @Test
@@ -54,7 +54,7 @@ class HubSpotClientTest {
         when(objectMapper.writeValueAsString(dto)).thenReturn(jsonBody);
 
         WebClient mock = MockWebClientHelper.mockJsonPostResponse(expectedResponse);
-        hubSpotClient = new HubSpotClient(mock, objectMapper, oAuthService, noRetry);
+        hubSpotClient = new HubSpotClient(mock, objectMapper, oAuthService, noRetry, CONTACTS_URL);
 
         // Act
         String result = hubSpotClient.createContact(dto);
@@ -83,7 +83,7 @@ class HubSpotClientTest {
         when(objectMapper.writeValueAsString(dto)).thenReturn(jsonBody);
 
         WebClient mock = MockWebClientHelper.mock429RateLimitResponse();
-        hubSpotClient = new HubSpotClient(mock, objectMapper, oAuthService, noRetry);
+        hubSpotClient = new HubSpotClient(mock, objectMapper, oAuthService, noRetry, CONTACTS_URL);
 
         // Act & Assert
         Exception ex = assertThrows(RuntimeException.class, () -> hubSpotClient.createContact(dto));
@@ -100,7 +100,7 @@ class HubSpotClientTest {
         when(objectMapper.writeValueAsString(dto)).thenReturn(jsonBody);
 
         WebClient mock = MockWebClientHelper.mockErrorJsonPostResponse(400, "Bad Request");
-        hubSpotClient = new HubSpotClient(mock, objectMapper, oAuthService, noRetry);
+        hubSpotClient = new HubSpotClient(mock, objectMapper, oAuthService, noRetry, CONTACTS_URL);
 
         // Act & Assert
         Exception ex = assertThrows(RuntimeException.class, () -> hubSpotClient.createContact(dto));

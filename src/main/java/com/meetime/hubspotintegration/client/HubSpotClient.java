@@ -7,6 +7,7 @@ import com.meetime.hubspotintegration.exception.HubSpotIntegrationException;
 import com.meetime.hubspotintegration.service.HubSpotOAuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -18,21 +19,23 @@ import reactor.util.retry.Retry;
 public class HubSpotClient {
 
     private static final Logger log = LoggerFactory.getLogger(HubSpotClient.class);
-    private static final String CONTACTS_URL = "https://api.hubapi.com/crm/v3/objects/contacts";
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
     private final HubSpotOAuthService oAuthService;
     private final Retry retry;
+    private final String contactsUrl;
 
     public HubSpotClient(WebClient webClient,
                          ObjectMapper objectMapper,
                          HubSpotOAuthService oAuthService,
-                         Retry retry) {
+                         Retry retry,
+                         @Value("${hubspot.contacts.url}") String contactsUrl) {
         this.webClient = webClient;
         this.objectMapper = objectMapper;
         this.oAuthService = oAuthService;
         this.retry = retry;
+        this.contactsUrl = contactsUrl;
     }
 
     public String createContact(ContactDTO contactDTO) {
@@ -47,7 +50,7 @@ public class HubSpotClient {
 
     private ResponseEntity<String> sendCreateContactRequest(String token, String bodyJson) {
         return webClient.post()
-                .uri(CONTACTS_URL)
+                .uri(contactsUrl)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(bodyJson)
