@@ -46,7 +46,7 @@ class WebhookIntegrationTest {
     void shouldReturn200IfSignatureIsValid() throws Exception {
         String payload = "[{\"eventId\":1,\"subscriptionType\":\"contact.creation\",\"objectId\":123}]";
         String signature = generateSignatureV1(payload);
-        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+        String timestamp = String.valueOf(Instant.now().toEpochMilli());
 
         webTestClient.post()
                 .uri("/webhook/contact")

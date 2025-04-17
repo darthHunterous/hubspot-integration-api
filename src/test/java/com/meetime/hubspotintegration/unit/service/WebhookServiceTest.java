@@ -3,67 +3,95 @@ package com.meetime.hubspotintegration.unit.service;
 import com.meetime.hubspotintegration.exception.UnauthorizedException;
 import com.meetime.hubspotintegration.service.WebhookService;
 import com.meetime.hubspotintegration.util.HubSpotSecurityUtils;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(org.mockito.junit.jupiter.MockitoExtension.class)
+@ExtendWith(MockitoExtension.class)
 class WebhookServiceTest {
 
     @Mock
     private HubSpotSecurityUtils securityUtils;
 
-    @InjectMocks
     private WebhookService webhookService;
 
+    @BeforeEach
+    void setUp() {
+        webhookService = new WebhookService(securityUtils);
+    }
+
     @Test
-    void processWebhook_withValidSignature_shouldNotThrow() {
-        // Arrange
-        String payload   = "{\"foo\":\"bar\"}";
+    void shouldAcceptValidTimestampAndSignature() {
+        String payload = "{\"foo\":\"bar\"}";
         String signature = "valid-signature";
-        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+        long nowMillis = Instant.now().toEpochMilli();
+
         when(securityUtils.isValidSignature(payload, signature)).thenReturn(true);
 
-        // Act & Assert
-        assertDoesNotThrow(() -> webhookService.processWebhook(payload, signature, timestamp));
+        assertDoesNotThrow(() -> webhookService.processWebhook(
+                payload, signature, String.valueOf(nowMillis))
+        );
+
         verify(securityUtils).isValidSignature(payload, signature);
     }
 
     @Test
-    void processWebhook_withInvalidSignature_shouldThrowUnauthorizedException() {
-        // Arrange
-        String payload   = "{\"foo\":\"bar\"}";
-        String signature = "invalid-signature";
-        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+    void shouldRejectIfTimestampTooOld() {
+        String payload = "{}";
+        String signature = "valid";
+        long oldMillis = Instant.now().minus(Duration.ofMinutes(6)).toEpochMilli();
+
+        assertThrows(UnauthorizedException.class, () ->
+                webhookService.processWebhook(payload, signature, String.valueOf(oldMillis))
+        );
+
+        verify(securityUtils, never()).isValidSignature(any(), any());
+    }
+
+    @Test
+    void shouldRejectIfTimestampTooFarInFuture() {
+        String payload = "{}";
+        String signature = "valid";
+        long futureMillis = Instant.now().plus(Duration.ofMinutes(10)).toEpochMilli();
+
+        assertThrows(UnauthorizedException.class, () ->
+                webhookService.processWebhook(payload, signature, String.valueOf(futureMillis))
+        );
+
+        verify(securityUtils, never()).isValidSignature(any(), any());
+    }
+
+    @Test
+    void shouldRejectIfTimestampIsInvalidFormat() {
+        String payload = "{}";
+        String signature = "valid";
+        String badTimestamp = "abc";
+
+        assertThrows(UnauthorizedException.class, () ->
+                webhookService.processWebhook(payload, signature, badTimestamp)
+        );
+
+        verify(securityUtils, never()).isValidSignature(any(), any());
+    }
+
+    @Test
+    void shouldRejectIfSignatureIsInvalid() {
+        String payload = "{\"foo\":\"bar\"}";
+        String signature = "invalid";
+        long nowMillis = Instant.now().toEpochMilli();
+
         when(securityUtils.isValidSignature(payload, signature)).thenReturn(false);
 
-        // Act & Assert
-        UnauthorizedException ex = assertThrows(
-                UnauthorizedException.class,
-                () -> webhookService.processWebhook(payload, signature, timestamp)
+        assertThrows(UnauthorizedException.class, () ->
+                webhookService.processWebhook(payload, signature, String.valueOf(nowMillis))
         );
-        assertEquals("Invalid webhook signature", ex.getMessage());
-        verify(securityUtils).isValidSignature(payload, signature);
-    }
-
-    @Test
-    void processWebhook_withOldTimestamp_shouldThrowUnauthorized() {
-        String payload = "{\"foo\":\"bar\"}";
-        String signature = "dummy";
-
-        long oldTimestamp = Instant.now().minusSeconds(600).getEpochSecond();
-
-        UnauthorizedException ex = assertThrows(
-                UnauthorizedException.class,
-                () -> webhookService.processWebhook(payload, signature, String.valueOf(oldTimestamp))
-        );
-
-        assertEquals("Timestamp expired or too far from server time", ex.getMessage());
     }
 }
